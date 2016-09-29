@@ -31,7 +31,8 @@ var destinationAirport
 var outboundDateString
 var returnDateString
 var adultPassengerCount
-var dealPriceThreshold
+var individualDealPrice
+var totalDealPrice
 var interval = 30 // In minutes
 
 // Parse command line options (no validation, sorry!)
@@ -52,8 +53,11 @@ process.argv.forEach((arg, i, argv) => {
     case "--passengers":
       adultPassengerCount = argv[i + 1]
       break
-    case "--deal-price-threshold":
-      dealPriceThreshold = parseInt(argv[i + 1])
+    case "--individual-deal-price":
+      individualDealPrice = parseInt(argv[i + 1])
+      break
+    case "--total-deal-price":
+      totalDealPrice = parseInt(argv[i + 1])
       break
     case "--interval":
       interval = parseFloat(argv[i + 1])
@@ -411,8 +415,14 @@ const fetch = () => {
         prevLowestReturnFare = lowestReturnFare
 
         // Do some Twilio magic (SMS alerts for awesome deals)
-        if (dealPriceThreshold && (lowestOutboundFare <= dealPriceThreshold || lowestReturnFare <= dealPriceThreshold)) {
-          const message = `Deal alert! Lowest fair has hit \$${lowestOutboundFare} (outbound) and \$${lowestReturnFare} (return)`
+        const awesomeDealIsAwesome = (
+          totalDealPrice && (lowestOutboundFare + lowestReturnFare <= totalDealPrice)
+        ) || (
+          individualDealPrice && (lowestOutboundFare <= individualDealPrice || lowestReturnFare <= individualDealPrice)
+        )
+
+        if (awesomeDealIsAwesome) {
+          const message = `Deal alert! Combined total has hit \$${lowestOutboundFare + lowestReturnFare}. Individual fares are \$${lowestOutboundFare} (outbound) and \$${lowestReturnFare} (return).`
 
           // Party time
           dashboard.log([
@@ -425,8 +435,8 @@ const fetch = () => {
         }
 
         dashboard.log([
-          `Lowest fair for an outbound flight is currently \$${[lowestOutboundFare, outboundFareDiffString].filter(i => i).join(" ")}`,
-          `Lowest fair for a return flight is currently \$${[lowestReturnFare, returnFareDiffString].filter(i => i).join(" ")}`
+          `Lowest fares for an outbound flight is currently \$${[lowestOutboundFare, outboundFareDiffString].filter(i => i).join(" ")}`,
+          `Lowest fares for a return flight is currently \$${[lowestReturnFare, returnFareDiffString].filter(i => i).join(" ")}`
         ])
 
         dashboard.plot({
@@ -461,7 +471,8 @@ dashboard.settings([
   `Return date: ${returnDateString}`,
   `Passengers: ${adultPassengerCount}`,
   `Interval: ${pretty(interval * TIME_MIN)}`,
-  `Deal price: ${dealPriceThreshold ? `<= \$${dealPriceThreshold}` : "disabled"}`,
+  `Individual deal price: ${individualDealPrice ? `<= \$${individualDealPrice}` : "disabled"}`,
+  `Total deal price: ${totalDealPrice ? `<= \$${totalDealPrice}` : "disabled"}`,
   `SMS alerts: ${isTwilioConfigured ? process.env.TWILIO_PHONE_TO : "disabled"}`
 ])
 
