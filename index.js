@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 "use strict"
 
+require('dotenv').config()
+
 const osmosis = require("osmosis")
 const chalk = require("chalk")
 const rainbow = require("chalk-rainbow")
